@@ -1,5 +1,5 @@
 # Log Stacker
-> A colourful and less settings logger, based on built-in package `logging`.
+> A colourful and less settings logger, based on the built-in package `logging`.
 
 ## Versions
 |#|      date|version|
