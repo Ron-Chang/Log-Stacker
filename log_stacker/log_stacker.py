@@ -145,27 +145,8 @@ class LoggerFormatter(logging.Formatter):
 
 
 class StreamLogger:
-    """
-    主機標準輸出處理器
-    """
 
     def get_handler(level=logging.DEBUG):
-        """
-        # 建立 輸出處理器 顯示訊息
-        handler = logging.StreamHandler(sys.stdout)
-
-        # 設定 輸出處理器 捕捉層級
-        handler.setLevel(level)
-
-        # 使用自定義LoggerFormatter
-        formatter = LoggerFormatter(type_=LoggerFormatter.STREAM)
-
-        # 設定 輸出處理器 格式
-        handler.setFormatter(formatter)
-
-        # [Optional] 將 輸出處理器 加入 root logger
-        logger.addHandler(handler)
-        """
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(level)
         formatter = LoggerFormatter(type_=LoggerFormatter.STREAM)
@@ -174,9 +155,6 @@ class StreamLogger:
 
 
 class FileLogger:
-    """
-    本地日誌文件處理器
-    """
 
     _TITLE = os.environ.get('APP_NAME', 'default_log').replace(' ', '_').lower()
     _ROOT = os.path.abspath('.')
@@ -191,27 +169,6 @@ class FileLogger:
 
     @staticmethod
     def _get_rotating_file_handler(filename, level=logging.DEBUG):
-        """
-        # 建立 循環 日誌處理器
-        handler = TimedRotatingFileHandler(
-            filename=filename,
-            when='H',
-            interval=1,
-            backupCount=10000,
-            encoding=None,
-            delay=False,
-            utc=False,
-        )
-        # 設定 日誌處理器 捕捉層級
-        handler.setLevel(level)
-        # 使用自定義LoggerFormatter
-        formatter = LoggerFormatter(type_=LoggerFormatter.FILE)
-        # 設定 日誌處理器 格式
-        handler.setFormatter(formatter)
-
-        # [Optional] 將 日誌處理器 加入 root logger
-        logger.addHandler(handler)
-        """
         handler = TimedRotatingFileHandler(
             filename=filename,
             when='H',
@@ -224,24 +181,10 @@ class FileLogger:
         handler.setLevel(level)
         formatter = LoggerFormatter(type_=LoggerFormatter.FILE)
         handler.setFormatter(formatter)
-        # rotating_file_handler.addFilter(_RouteFilter())
         return handler
 
     @classmethod
     def get_handlers(cls, entry_point, level=logging.DEBUG):
-        """
-        # 建立 一般 日誌處理器
-        handler = logging.FileHandler('put_your_log_pathname_here')
-        # 設定 日誌處理器 捕捉層級
-        handler.setLevel(level)
-        # 使用自定義LoggerFormatter
-        formatter = LoggerFormatter(type_=LoggerFormatter.FILE)
-        # 設定 輸出處理器 格式
-        handler.setFormatter(formatter)
-
-        # 建立 循環日誌處理器
-        # see {cls._get_rotating_file_handler.__doc__}
-        """
         handlers = list()
         for levelno, level_name in cls._LEVEL_MAPS.items():
             if levelno < level:
@@ -325,9 +268,6 @@ class LogStacker:
 
     @staticmethod
     def _resist_packages(packages):
-        """
-            阻擋指定套件訊息
-        """
         for package in packages:
             logging.getLogger(package).setLevel(logging.WARNING)
         logging.captureWarnings(True)
