@@ -1,6 +1,9 @@
 import logging
+import os
+import sys
 import traceback
 from datetime import datetime
+from logging.handlers import TimedRotatingFileHandler
 
 
 class Dyer:
@@ -78,8 +81,8 @@ class LoggerFormatter(logging.Formatter):
     _FG_RED_HIGHLIGHT = Dyer.dye(fg=Dyer.Color.RED, style=Dyer.Style.BOLD)
     _BG_RED_HIGHLIGHT = Dyer.dye(bg=Dyer.Color.RED, style=Dyer.Style.BLINK)
 
-    _STREAM_FMT =  '[%(asctime)s] {badge_color}[%(levelname)-10s]{reset}{text_color}%(message)s{reset}'
-    _DEFAULT_FMT =  '[%(asctime)s] [%(levelname)-10s] %(message)s'
+    _STREAM_FMT = '[%(asctime)s] {badge_color}[%(levelname)-8s]{reset} {text_color}[%(message)s]{reset}'
+    _DEFAULT_FMT = '[%(asctime)s] [%(levelname)-10s] [%(message)s]'
 
     _STREAM_INFO_FORMAT = _STREAM_FMT.format(
         badge_color=_BG_GREEN,
@@ -123,12 +126,13 @@ class LoggerFormatter(logging.Formatter):
         logging.CRITICAL: LOGGING_STYLE(_DEFAULT_FMT),
     }
 
-    def __init__(self, type_):
+    def __init__(self, type_, fmt=None):
         """
         Cannot recognized by instance() method
         logging.FileHandler is inherit from logging.StreamHandler
         """
-        super().__init__()
+        fmt = fmt or self._DEFAULT_FMT
+        super().__init__(fmt=fmt)
         self.type_ = type_
 
     def format(self, record):
@@ -140,89 +144,266 @@ class LoggerFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
-class LogStacker:
+class StreamLogger:
+    """
+    主機標準輸出處理器
+    """
 
-    _DEFAULT_STREAM_LEVEL = logging.DEBUG
-    _DEFAULT_FILE_LEVEL = logging.DEBUG
+    def get_handler(level=logging.DEBUG):
+        """
+        # 建立 輸出處理器 顯示訊息
+        handler = logging.StreamHandler(sys.stdout)
 
-    _TRACEBACK_LEVEL = {
-        logging.ERROR,
-        logging.CRITICAL
+        # 設定 輸出處理器 捕捉層級
+        handler.setLevel(level)
+
+        # 使用自定義LoggerFormatter
+        formatter = LoggerFormatter(type_=LoggerFormatter.STREAM)
+
+        # 設定 輸出處理器 格式
+        handler.setFormatter(formatter)
+
+        # [Optional] 將 輸出處理器 加入 root logger
+        logger.addHandler(handler)
+        """
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(level)
+        formatter = LoggerFormatter(type_=LoggerFormatter.STREAM)
+        handler.setFormatter(formatter)
+        return handler
+
+
+class FileLogger:
+    """
+    本地日誌文件處理器
+    """
+
+    _TITLE = os.environ.get('APP_NAME', 'default_log').replace(' ', '_').lower()
+    _ROOT = os.path.abspath('.')
+
+    _LEVEL_MAPS = {
+        logging.DEBUG: 'debug',
+        logging.INFO: 'info',
+        logging.WARNING: 'warning',
+        logging.ERROR: 'error',
+        logging.CRITICAL: 'critical',
     }
 
-    def __init__(self, path, trap_level=None, stream_level=None, file_level=None):
-        self.path = path
-        self.stream_level = stream_level
-        self.file_level = file_level
-
-        # 實例化logger 物件
-        self.logger = logging.getLogger(path)
-        # 設定 logger 捕捉層級
-        self.logger.setLevel(trap_level or logging.DEBUG)
-
-        self._add_stream_handler()
-        self._add_file_handler()
-
-    def _add_stream_handler(self):
-        # 建立 輸出處理器 顯示訊息
-        stream_handler = logging.StreamHandler()
-        # 設定 輸出處理器 捕捉層級
-        stream_handler.setLevel(self.stream_level or self._DEFAULT_STREAM_LEVEL)
-        # 設定 輸出處理器 格式
-        stream_handler.setFormatter(
-            LoggerFormatter(type_=LoggerFormatter.STREAM)
+    @staticmethod
+    def _get_rotating_file_handler(filename, level=logging.DEBUG):
+        """
+        # 建立 循環 日誌處理器
+        handler = TimedRotatingFileHandler(
+            filename=filename,
+            when='H',
+            interval=1,
+            backupCount=10000,
+            encoding=None,
+            delay=False,
+            utc=False,
         )
-        # 將 輸出處理器 加入logger
-        self.logger.addHandler(stream_handler)
-
-    def _add_file_handler(self):
-        # 建立 日誌處理器 記錄訊息
-        file_handler = logging.FileHandler(f'{datetime.now().strftime("%F")}-{self.path}.log')
         # 設定 日誌處理器 捕捉層級
-        file_handler.setLevel(self.file_level or self._DEFAULT_FILE_LEVEL)
+        handler.setLevel(level)
+        # 使用自定義LoggerFormatter
+        formatter = LoggerFormatter(type_=LoggerFormatter.FILE)
         # 設定 日誌處理器 格式
-        file_handler.setFormatter(
-            LoggerFormatter(type_=LoggerFormatter.FILE)
+        handler.setFormatter(formatter)
+
+        # [Optional] 將 日誌處理器 加入 root logger
+        logger.addHandler(handler)
+        """
+        handler = TimedRotatingFileHandler(
+            filename=filename,
+            when='H',
+            interval=1,
+            backupCount=10000,
+            encoding=None,
+            delay=False,
+            utc=False,
         )
-        # 將 日誌處理器 加入logger
-        self.logger.addHandler(file_handler)
+        handler.setLevel(level)
+        formatter = LoggerFormatter(type_=LoggerFormatter.FILE)
+        handler.setFormatter(formatter)
+        # rotating_file_handler.addFilter(_RouteFilter())
+        return handler
+
+    @classmethod
+    def get_handlers(cls, entry_point, level=logging.DEBUG):
+        """
+        # 建立 一般 日誌處理器
+        handler = logging.FileHandler('put_your_log_pathname_here')
+        # 設定 日誌處理器 捕捉層級
+        handler.setLevel(level)
+        # 使用自定義LoggerFormatter
+        formatter = LoggerFormatter(type_=LoggerFormatter.FILE)
+        # 設定 輸出處理器 格式
+        handler.setFormatter(formatter)
+
+        # 建立 循環日誌處理器
+        # see {cls._get_rotating_file_handler.__doc__}
+        """
+        handlers = list()
+        for levelno, level_name in cls._LEVEL_MAPS.items():
+            if levelno < level:
+                continue
+            path = f'{cls._ROOT}/log/{level_name}_log'
+            os.makedirs(path, exist_ok=True)
+            filename = os.path.join(f'{path}/{cls._TITLE}.{entry_point}.{level_name}.log')
+            handler = cls._get_rotating_file_handler(filename=filename, level=levelno)
+            handlers.append(handler)
+        return handlers
+
+
+class LogStacker:
+    """
+    - How to use:
+
+        Import LogStacker at the entry point and customized optional settings before LogStacker.logging(__file__)
+
+        from log_stacker import LogStacker
+
+        # -------------- optional settings start -------------- #
+        LogStacker.STREAM_OUTPUT = True
+        # default: True
+        LogStacker.LOCAL_OUTPUT = True
+        # default: True
+
+        LogStacker.ROOT_LEVEL = LogStacker.DEBUG
+        # default: LogStacker.DEBUG
+        LogStacker.STREAM_LEVEL = LogStacker.WARNING
+        # default: LogStacker.DEBUG
+        LogStacker.LOCAL_LEVEL = LogStacker.DEBUG
+        # default: LogStacker.DEBUG
+
+        LogStacker.TRACEBACK_LEVEL.add(LogStacker.INFO)
+        # default: {LogStacker.WARNING, LogStacker.ERROR, LogStacker.CRITICAL}
+
+        LogStacker.IGNORE_PACKAGES.add('package_name_str')
+        # default: {}
+
+        # In progress attributes
+        # LogStacker.REMOTE_OUTPUT = False
+        # LogStacker.REMOTE_LEVEL = LogStacker.DEBUG
+
+        # -------------- optional settings end -------------- #
+
+        LogStacker.logging(__file__)
+    """
+
+    CRITICAL = logging.CRITICAL
+    ERROR = logging.ERROR
+    WARNING = logging.WARNING
+    INFO = logging.INFO
+    DEBUG = logging.DEBUG
+
+    ROOT_LOGGER = None
+
+    STREAM_OUTPUT = True
+    LOCAL_OUTPUT = True
+
+    ROOT_LEVEL = logging.DEBUG
+    STREAM_LEVEL = logging.DEBUG
+    FILE_LEVEL = logging.DEBUG
+
+    # REMOTE_OUTPUT = True  # in progress
+    # REMOTE_LEVEL = logging.DEBUG  # in progress
+
+    TRACEBACK_LEVEL = {
+        logging.WARNING,
+        logging.ERROR,
+        logging.CRITICAL,
+    }
+
+    IGNORE_PACKAGES = {}
+
+    @classmethod
+    def _update_root_logger(cls, handlers):
+        cls.ROOT_LOGGER = logging.getLogger()
+        cls.ROOT_LOGGER.setLevel(cls.ROOT_LEVEL)
+        for handler in handlers:
+            cls.ROOT_LOGGER.addHandler(handler)
+
+    @staticmethod
+    def _resist_packages(packages):
+        """
+            阻擋指定套件訊息
+        """
+        for package in packages:
+            logging.getLogger(package).setLevel(logging.WARNING)
+        logging.captureWarnings(True)
+
+    @classmethod
+    def logging(cls, entry_point, stream_level=None, file_level=None, remote_level=None):
+        """
+        TODO
+            if cls.REMOTE_OUTPUT:
+                add fluent
+        """
+        entry_point = os.path.basename(entry_point)
+        handlers = list()
+        if cls.STREAM_OUTPUT:
+            stream_handler = StreamLogger.get_handler(level=cls.STREAM_LEVEL)
+            handlers.append(stream_handler)
+        if cls.LOCAL_OUTPUT:
+            file_handlers = FileLogger.get_handlers(entry_point=entry_point, level=cls.FILE_LEVEL)
+            handlers.extend(file_handlers)
+
+        cls._update_root_logger(handlers=handlers)
+        cls._resist_packages(packages=cls.IGNORE_PACKAGES)
+
+    @classmethod
+    def _validate(cls):
+        if cls.ROOT_LOGGER is None:
+            raise Exception(f'LogStacker Error: Initialization is required. \n{cls.__doc__}')
 
     @classmethod
     def _get_traceback(cls, level):
-        traceback_ = traceback.format_exc()
-        if level in cls._TRACEBACK_LEVEL and 'NoneType: None' not in traceback_:
-            return traceback_
-        return str()
+        if level not in cls.TRACEBACK_LEVEL:
+            return str()
+        result = traceback.format_exc()
+        if 'NoneType: None' in result:
+            return str()
+        return result
 
     @classmethod
     def _get_msg(cls, level, msg=None, exception=None):
         message = msg or str()
         exception = exception or str()
-        traceback_ = cls._get_traceback(level=level)
+        exception_traceback = cls._get_traceback(level=level)
         output = (
             f'\n\t<MESSAGE>: {message}'
             f'\n\t<EXCEPTION>: {exception}'
-            f'\n\t<TRACEBACK>: \n{traceback_}'
+            f'\n\t<TRACEBACK>: \n{exception_traceback}'
         )
         return output
 
-    def debug(self, exception=None, msg=None):
-        msg = self._get_msg(level=logging.DEBUG, msg=msg, exception=exception)
-        self.logger.debug(msg=msg)
+    @classmethod
+    def debug(cls, exception=None, msg=None):
+        cls._validate()
+        msg = cls._get_msg(level=logging.DEBUG, msg=msg, exception=exception)
+        cls.ROOT_LOGGER.debug(msg=msg)
 
-    def info(self, exception=None, msg=None):
-        msg = self._get_msg(level=logging.INFO, msg=msg, exception=exception)
-        self.logger.info(msg=msg)
+    @classmethod
+    def info(cls, exception=None, msg=None):
+        cls._validate()
+        msg = cls._get_msg(level=logging.INFO, msg=msg, exception=exception)
+        cls.ROOT_LOGGER.info(msg=msg)
 
-    def warning(self, exception=None, msg=None):
-        msg = self._get_msg(level=logging.WARNING, msg=msg, exception=exception)
-        self.logger.warning(msg=msg)
+    @classmethod
+    def warning(cls, exception=None, msg=None):
+        cls._validate()
+        msg = cls._get_msg(level=logging.WARNING, msg=msg, exception=exception)
+        cls.ROOT_LOGGER.warning(msg=msg)
 
-    def error(self, exception=None, msg=None):
-        msg = self._get_msg(level=logging.ERROR, msg=msg, exception=exception)
-        self.logger.error(msg=msg)
+    @classmethod
+    def error(cls, exception=None, msg=None):
+        cls._validate()
+        msg = cls._get_msg(level=logging.ERROR, msg=msg, exception=exception)
+        cls.ROOT_LOGGER.error(msg=msg)
 
-    def critical(self, exception=None, msg=None):
-        msg = self._get_msg(level=logging.CRITICAL, msg=msg, exception=exception)
-        self.logger.critical(msg=msg)
+    @classmethod
+    def critical(cls, exception=None, msg=None):
+        cls._validate()
+        msg = cls._get_msg(level=logging.CRITICAL, msg=msg, exception=exception)
+        cls.ROOT_LOGGER.critical(msg=msg)
 
