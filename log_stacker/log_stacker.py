@@ -19,11 +19,11 @@ class Dyer:
         DARK = 2
         ITALIC = 3
         UNDERSCORE = 4
-        BLINK = 5
-        UNKNOWN = 6
-        TURNOVER = 7
-        STRIKE_THROUGH = 9
+        BLINK_SLOW = 5
+        BLINK_FAST = 6
+        REVERSE = 7
         HIDE = 8
+        STRIKE_THROUGH = 9
 
     class Color:
         BLACK = 0
@@ -79,7 +79,7 @@ class LoggerFormatter(logging.Formatter):
     _BG_PURPLE = Dyer.dye(bg=Dyer.Color.PURPLE)
 
     _FG_RED_HIGHLIGHT = Dyer.dye(fg=Dyer.Color.RED, style=Dyer.Style.BOLD)
-    _BG_RED_HIGHLIGHT = Dyer.dye(bg=Dyer.Color.RED, style=Dyer.Style.BLINK)
+    _BG_RED_HIGHLIGHT = Dyer.dye(bg=Dyer.Color.RED, style=Dyer.Style.BLINK_SLOW)
 
     _STREAM_FMT = '[%(asctime)s] {badge_color}[%(levelname)-8s]{reset} {text_color}[%(message)s]{reset}'
     _DEFAULT_FMT = '[%(asctime)s] [%(levelname)-10s] [%(message)s]'
