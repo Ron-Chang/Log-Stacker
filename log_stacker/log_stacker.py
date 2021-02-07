@@ -275,6 +275,15 @@ class LogStacker:
     @classmethod
     def logging(cls, entry_point, stream_level=None, file_level=None, remote_level=None):
         """
+        :params entry_point: entry point location
+        :type entry_point: str
+        :params stream_level: LogStacker.CRITICAL, LogStacker.ERROR, LogStacker.WARNING, LogStacker.INFO, LogStacker.DEBUG
+        :type stream_level: int
+        :params file_level: LogStacker.CRITICAL, LogStacker.ERROR, LogStacker.WARNING, LogStacker.INFO, LogStacker.DEBUG
+        :type file_level: int
+        :params remote_level: LogStacker.CRITICAL, LogStacker.ERROR, LogStacker.WARNING, LogStacker.INFO, LogStacker.DEBUG
+        :type remote_level: int
+
         TODO
             if cls.REMOTE_OUTPUT:
                 add fluent

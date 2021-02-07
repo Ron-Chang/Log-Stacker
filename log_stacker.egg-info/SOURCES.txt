@@ -1,0 +1,8 @@
+README.md
+setup.py
+log_stacker/__init__.py
+log_stacker/log_stacker.py
+log_stacker.egg-info/PKG-INFO
+log_stacker.egg-info/SOURCES.txt
+log_stacker.egg-info/dependency_links.txt
+log_stacker.egg-info/top_level.txt
